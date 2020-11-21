@@ -9,32 +9,6 @@ inline uintptr_t rebase(const uintptr_t adr)
 	return reinterpret_cast<uintptr_t>(GetModuleHandleA(nullptr)) + adr - 0x400000;
 }
 
-typedef void(__fastcall* o_setkey)(uintptr_t _this, int extra, byte* key, unsigned int length, uintptr_t params);
-o_setkey orig_setkey;
-
-void __fastcall setkey_hook(uintptr_t _this, int extra, byte* key, unsigned int length, uintptr_t params)
-{
-	printf("key:\n");
-	for (auto i = 0; i < length; i++)
-		printf("%02x ", key[i]);
-	printf("\n");
-	system("pause");
-	return orig_setkey(_this, extra, key, length, params);
-}
-
-typedef void(__fastcall* o_setiv)(uintptr_t _this, int extra, byte* iv, unsigned int length);
-o_setiv orig_setiv;
-
-void __fastcall setiv_hook(uintptr_t _this, int extra, byte* iv, unsigned int length)
-{
-	printf("iv:\n");
-	for (auto i = 0; i < length; i++)
-		printf("%02x ", iv[i]);
-	printf("\n");
-	system("pause");
-	return orig_setiv(_this, extra, iv, length);
-}
-
 enum class packet_mode
 {
 	none,
