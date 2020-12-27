@@ -7,4 +7,4 @@ IV and nonce are both 16 bytes, this project just completely bypasses the encryp
 
 (mainly to be used in the aid of cheating software I guess, since custom implementation using this method is possible but not recommended or viable or good!)
 
-It is also not a token that is generated every few minutes. It is a IV/Nonce and a new iv and nonce every time a zone change occurs, and is generated when the initial login packet is sent.
+It is also not a token that is generated every few minutes. It is a IV/nonce and a new iv and nonce are generated every time a zone change occurs, and is generated when the initial login packet is sent.
