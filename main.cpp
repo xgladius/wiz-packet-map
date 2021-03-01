@@ -2,13 +2,11 @@
 #include <Windows.h>
 #include "wiz_msgs.h"
 #include "wiz_packet.h"
-#include <emmintrin.h>
 #include "MinHook.h"
-// use whatever sigscan here, taken from https://www.unknowncheats.me/forum/general-programming-and-reversing/141599-findpattern-real-faster-urs-g3t-ov3r-1t.html
+#include "sigs.h"
 
 int main()
 {
-
 	const auto protocols = get_protocols();
 	for (auto& p : protocols)
 	{
@@ -22,11 +20,13 @@ int main()
 			}
 		}
 	}
-	
-	DWORD old;
-	VirtualProtect(reinterpret_cast<LPVOID>(replacement_adr), 4, PAGE_READWRITE, &old);
-	*reinterpret_cast<uintptr_t*>(replacement_adr) = reinterpret_cast<uint32_t>(&ogProcessData_hook);
-	VirtualProtect(reinterpret_cast<LPVOID>(replacement_adr), 4, old, &old);
+
+	for (auto bypass_address : get_vf_references()) {
+		DWORD old;
+		VirtualProtect(reinterpret_cast<LPVOID>(replacement_adr), 4, PAGE_READWRITE, &old);
+		*reinterpret_cast<uintptr_t*>(bypass_address) = reinterpret_cast<uint32_t>(&ogProcessData_hook);
+		VirtualProtect(reinterpret_cast<LPVOID>(replacement_adr), 4, old, &old);
+	}
 	
 
 	MH_Initialize();
