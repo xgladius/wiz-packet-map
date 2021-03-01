@@ -5,6 +5,7 @@
 #include "wiz_wad.h"
 #include "rapidxml.hpp"
 #include <map>
+#include <algorithm>
 
 using namespace rapidxml;
 
@@ -85,7 +86,7 @@ xml_message get_msg_from_xml(xml_node<>* node)
 			ret.msg_access_level = field_node->value();
 			continue;
 		}
-		
+
 		ret.params.push_back({ field_node->name(), std::string(type->value()) });
 	}
 	return ret;
@@ -112,9 +113,9 @@ std::vector<protocol_info> get_protocols() {
 	std::vector<file_dat> messages;
 	get_wad("Messages.xml", ".xml", messages);
 	for (auto message : messages) {
-		
+
 		std::map<std::string, xml_message> msgs;
-		
+
 		message.file.push_back(0x00);
 		const auto data = reinterpret_cast<char*>(message.file.data());
 		xml_document<> doc;
@@ -131,7 +132,7 @@ std::vector<protocol_info> get_protocols() {
 		auto has_record_order = false;
 
 		auto* root = doc.first_node();
-		
+
 		for (auto* node = root->first_node();
 			node; node = node->next_sibling())
 		{
@@ -146,11 +147,11 @@ std::vector<protocol_info> get_protocols() {
 		std::vector<xml_message> sorted_messages;
 		if (has_record_order)
 			sorted_messages.resize(254);
-		
+
 
 		for (auto* node = root->first_node();
 			node; node = node->next_sibling())
-		{			
+		{
 			auto* record_node = node->first_node();
 			if (!record_node)
 				continue;
@@ -161,17 +162,26 @@ std::vector<protocol_info> get_protocols() {
 			{
 				sorted_messages[has_msg_order(record_node)] = record;
 			}
-			else 
+			else
 			{
 				msgs.insert(std::pair<std::string, xml_message>(record.msg_name, record));
 			}
 		}
+
+		bool is_done = false;
 
 		if (!has_record_order) {
 			for (auto it = msgs.begin();
 				it != msgs.end(); ++it)
 			{
 				sorted_messages.push_back(it->second);
+				if (std::string(root->first_node()->first_node()->first_node("ProtocolType")->value()) == "GAME")
+				{
+					if (sorted_messages.size() == 50 && !is_done) {
+						sorted_messages.pop_back(); // IS KI's ALPHABETICAL SORT WRONG?????????
+						is_done = true;
+					}
+				}
 			}
 		}
 
