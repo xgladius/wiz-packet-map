@@ -6,6 +6,7 @@
 #include <polyhook2/IHook.hpp>
 #include <polyhook2/Detour/ADetour.hpp>
 #include <emmintrin.h>
+#include "sigs.h"
 
 enum class packet_mode
 {
@@ -189,8 +190,7 @@ int __stdcall wsasend_hook(SOCKET s, LPWSABUF lp, DWORD dwc, LPDWORD lpnbs, DWOR
 }
 
 typedef void(__thiscall* og_ProcessData)(uint32_t _this, uint8_t* outString, uint8_t* inString, int _length);
-auto adr = reinterpret_cast<uint32_t>(GetModuleHandle(nullptr)) + 0x432960 - 0x400000;//dwFindPattern(reinterpret_cast<const unsigned char*>("\x6A\xFF\x68\x00\x00\x00\x00\x64\xA1\x00\x00\x00\x00\x50\x81\xEC\x00\x00\x00\x00\x53\x55\x56\x57\xA1\x00\x00\x00\x00\x33\xC4\x50\x8D\x84\x24\x00\x00\x00\x00\x64\xA3\x00\x00\x00\x00\x8B\xF1\x83\x7E\x34\x02"), "xxx????xx????xxx????xxxxx????xxxxxx????xx????xxxxxx");
-auto replacement_adr = reinterpret_cast<uint32_t>(GetModuleHandle(nullptr)) + 0x2259240 - 0x400000;
+auto adr = dwFindPattern(reinterpret_cast<const unsigned char*>("\x6A\xFF\x68\x00\x00\x00\x00\x64\xA1\x00\x00\x00\x00\x50\x81\xEC\x00\x00\x00\x00\x53\x55\x56\x57\xA1\x00\x00\x00\x00\x33\xC4\x50\x8D\x84\x24\x00\x00\x00\x00\x64\xA3\x00\x00\x00\x00\x8B\xF1\x83\x7E\x34\x02"), "xxx????xx????xxx????xxxxx????xxxxxx????xx????xxxxxx");
 auto orig_ProcessData = reinterpret_cast<og_ProcessData>(adr);
 
 uint64_t ogrig_ProcessData = NULL;
@@ -235,3 +235,4 @@ NOINLINE void __fastcall ogProcessData_hook(uint32_t _this, uint32_t* edx, uint8
 	set_iv.first.clear();
 	set_iv.second = packet_mode::none;
 }
+

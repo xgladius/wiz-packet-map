@@ -10,11 +10,10 @@ int main()
 	const auto protocols = get_protocols();
 
 	for (auto bypass_address : get_vf_references()) {
-		printf("%x\n", bypass_address);
 		DWORD old;
-		VirtualProtect(reinterpret_cast<LPVOID>(replacement_adr), 4, PAGE_READWRITE, &old);
+		VirtualProtect(reinterpret_cast<LPVOID>(bypass_address), 4, PAGE_READWRITE, &old);
 		*reinterpret_cast<uintptr_t*>(bypass_address) = reinterpret_cast<uint32_t>(&ogProcessData_hook);
-		VirtualProtect(reinterpret_cast<LPVOID>(replacement_adr), 4, old, &old);
+		VirtualProtect(reinterpret_cast<LPVOID>(bypass_address), 4, old, &old);
 	}
 
 	MH_Initialize();
