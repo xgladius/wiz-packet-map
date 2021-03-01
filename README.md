@@ -15,6 +15,7 @@ At some unknown time, KingsIsle pushed a patch to break this tool, which checks 
 
 # The bypass
 The bypass is trivially simple, overwrite the bytes pointing to the original function with new bytes pointing to our function.
+
 This is the function table of the AuthenticatedSymmetricCipherBase class.
 ![Bytes of original function](https://i.imgur.com/CEhqNRk.png)
 
