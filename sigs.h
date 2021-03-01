@@ -54,16 +54,8 @@ std::vector<uint32_t> get_vf_references() {
 		le_arr[3 - i] = le_num >> i * 8;
 	const std::string le_string(le_arr.begin(), le_arr.end());
 
-	/*
-	 * as of 2/28/2021 this sig only occurs twice in the binary, but just in case :)
-	 */
-	
-	const auto first = dwFindPattern(reinterpret_cast<const unsigned char*>(le_string.c_str()), "xxxx");
-	ret.push_back(first);
-
-	while (const auto next = dwFindPattern(reinterpret_cast<const unsigned char*>(le_string.c_str()), "xxxx", reinterpret_cast<unsigned char*>(ret.front()))) {
-		ret.push_back(next);
-	}
+	ret.push_back(dwFindPattern(reinterpret_cast<const unsigned char*>(le_string.c_str()), "xxxx"));
+	ret.push_back(dwFindPattern(reinterpret_cast<const unsigned char*>(le_string.c_str()), "xxxx", reinterpret_cast<unsigned char*>(ret.back() + 0x4)));
 	
 	return ret;
 }

@@ -8,26 +8,14 @@
 int main()
 {
 	const auto protocols = get_protocols();
-	for (auto& p : protocols)
-	{
-		printf("\n%s -- %s\n", p.protocol_type.c_str(), p.protocol_description.c_str());
-		for (auto& m : p.messages)
-		{
-			printf("	%s - %s\n", m.msg_name.c_str(), m.msg_description.c_str());
-			for (auto& a : m.params)
-			{
-				printf("		%s: %s\n", a.type.c_str(), a.name.c_str());
-			}
-		}
-	}
 
 	for (auto bypass_address : get_vf_references()) {
+		printf("%x\n", bypass_address);
 		DWORD old;
 		VirtualProtect(reinterpret_cast<LPVOID>(replacement_adr), 4, PAGE_READWRITE, &old);
 		*reinterpret_cast<uintptr_t*>(bypass_address) = reinterpret_cast<uint32_t>(&ogProcessData_hook);
 		VirtualProtect(reinterpret_cast<LPVOID>(replacement_adr), 4, old, &old);
 	}
-	
 
 	MH_Initialize();
 	const auto wsock32 = GetModuleHandle(L"wsock32.dll");
