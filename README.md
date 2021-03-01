@@ -17,6 +17,7 @@ At some unknown time, KingsIsle pushed a patch to break this tool, which checks 
 The bypass is trivially simple, overwrite the bytes pointing to the original function with new bytes pointing to our function.
 This is the function table of the AuthenticatedSymmetricCipherBase class.
 ![Bytes of original function](https://i.imgur.com/CEhqNRk.png)
+
 By setting `base + 0x2259240` to `&ogProcessData_hook`, we overwrite the function that they want to call, with ours, allowing us to intercept all calls to `AuthenticatedSymmetricCipherBase::ProcessData`
 
 Then, by calling the original, we have maintained the functionality of the original function, while being able to intercept arguments passed to it.
