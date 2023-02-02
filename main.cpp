@@ -12,7 +12,7 @@ int main()
 	for (auto bypass_address : get_vf_references()) {
 		DWORD old;
 		VirtualProtect(reinterpret_cast<LPVOID>(bypass_address), 8, PAGE_READWRITE, &old);
-		*reinterpret_cast<uintptr_t*>(bypass_address) = reinterpret_cast<uint32_t>(&ogProcessData_hook);
+		*reinterpret_cast<uintptr_t*>(bypass_address) = reinterpret_cast<uint64_t>(&ogProcessData_hook);
 		VirtualProtect(reinterpret_cast<LPVOID>(bypass_address), 8, old, &old);
 	}
 
