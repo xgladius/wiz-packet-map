@@ -12,7 +12,7 @@ enum class packet_mode
 {
 	none,
 	sent,
-	sent_encrytped,
+	sent_encrypted,
 	recieved,
 	recieved_encrypted
 };
@@ -89,7 +89,7 @@ void handle_packet(std::vector<char>& full, packet_mode mode) {
 	case packet_mode::sent:
 		mode_str = "Sent";
 		break;
-	case packet_mode::sent_encrytped:
+	case packet_mode::sent_encrypted:
 		mode_str = "Sent Encrypted";
 		break;
 	case packet_mode::recieved:
@@ -190,13 +190,13 @@ int __stdcall wsasend_hook(SOCKET s, LPWSABUF lp, DWORD dwc, LPDWORD lpnbs, DWOR
 }
 
 typedef void(__thiscall* og_ProcessData)(uint32_t _this, uint8_t* outString, uint8_t* inString, int _length);
-auto adr = dwFindPattern(reinterpret_cast<const unsigned char*>("\x6A\xFF\x68\x00\x00\x00\x00\x64\xA1\x00\x00\x00\x00\x50\x81\xEC\x00\x00\x00\x00\x53\x55\x56\x57\xA1\x00\x00\x00\x00\x33\xC4\x50\x8D\x84\x24\x00\x00\x00\x00\x64\xA3\x00\x00\x00\x00\x8B\xF1\x83\x7E\x34\x02"), "xxx????xx????xxx????xxxxx????xxxxxx????xx????xxxxxx");
-auto orig_ProcessData = reinterpret_cast<og_ProcessData>(adr);
+uintptr_t ProcessDataAddress = pattern_scan(NULL, "40 53 55 56 57 41 54 41 56 41 57 48 81 EC ?? ?? ?? ?? 48 8b 05 ?? ?? ?? ?? 48 33 C4 48 89 84 24 ?? ?? ?? ?? 49 8B F1");
+auto orig_ProcessData = reinterpret_cast<og_ProcessData>(ProcessDataAddress);
 
 uint64_t ogrig_ProcessData = NULL;
 
 std::pair<std::vector<char>, packet_mode> set_iv;
-NOINLINE void __fastcall ogProcessData_hook(uint32_t _this, uint32_t* edx, uint8_t* outString, uint8_t* inString, int length)
+NOINLINE void __fastcall ogProcessData_hook(uint32_t _this, uint8_t* outString, uint8_t* inString, int length)
 {
 	if (length == 8 && *reinterpret_cast<uint16_t*>(inString) == 0xf00d) // is header of packet (will always be sent)
 	{
@@ -204,7 +204,7 @@ NOINLINE void __fastcall ogProcessData_hook(uint32_t _this, uint32_t* edx, uint8
 		{
 			set_iv.first.push_back(inString[i]);
 		}
-		set_iv.second = packet_mode::sent_encrytped;
+		set_iv.second = packet_mode::sent_encrypted;
 		orig_ProcessData(_this, outString, inString, length);
 		return;
 	}

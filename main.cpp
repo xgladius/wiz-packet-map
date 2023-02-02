@@ -11,9 +11,9 @@ int main()
 
 	for (auto bypass_address : get_vf_references()) {
 		DWORD old;
-		VirtualProtect(reinterpret_cast<LPVOID>(bypass_address), 4, PAGE_READWRITE, &old);
+		VirtualProtect(reinterpret_cast<LPVOID>(bypass_address), 8, PAGE_READWRITE, &old);
 		*reinterpret_cast<uintptr_t*>(bypass_address) = reinterpret_cast<uint32_t>(&ogProcessData_hook);
-		VirtualProtect(reinterpret_cast<LPVOID>(bypass_address), 4, old, &old);
+		VirtualProtect(reinterpret_cast<LPVOID>(bypass_address), 8, old, &old);
 	}
 
 	MH_Initialize();
