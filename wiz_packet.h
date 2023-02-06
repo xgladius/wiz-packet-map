@@ -12,7 +12,7 @@ enum class packet_mode
 {
 	none,
 	sent,
-	sent_encrytped,
+	sent_encrypted,
 	recieved,
 	recieved_encrypted
 };
@@ -58,6 +58,29 @@ T read(char*& buf, const bool inc = true)
 	return ret;
 }
 
+LONG __stdcall ExceptionHandler(EXCEPTION_POINTERS* pExceptionInfo)
+{
+	if (pExceptionInfo->ExceptionRecord->ExceptionCode == STATUS_GUARD_PAGE_VIOLATION)
+	{
+		if (pExceptionInfo->ContextRecord->Rip == (uintptr_t)orig_ProcessData)
+			pExceptionInfo->ContextRecord->Rip = (uintptr_t)ogProcessData_hook;
+
+		pExceptionInfo->ContextRecord->EFlags |= 0x100;
+
+		return EXCEPTION_CONTINUE_EXECUTION;
+	}
+
+	if (pExceptionInfo->ExceptionRecord->ExceptionCode == STATUS_SINGLE_STEP)
+	{
+		DWORD dwOld;
+		VirtualProtect(reinterpret_cast<void*>((uintptr_t)orig_ProcessData), 1, PAGE_EXECUTE | PAGE_GUARD, &dwOld);
+
+		return EXCEPTION_CONTINUE_EXECUTION;
+	}
+
+	return EXCEPTION_CONTINUE_SEARCH;
+}
+
 packet_helper helper;
 
 void handle_packet(std::vector<char>& full, packet_mode mode) {
@@ -89,7 +112,7 @@ void handle_packet(std::vector<char>& full, packet_mode mode) {
 	case packet_mode::sent:
 		mode_str = "Sent";
 		break;
-	case packet_mode::sent_encrytped:
+	case packet_mode::sent_encrypted:
 		mode_str = "Sent Encrypted";
 		break;
 	case packet_mode::recieved:
@@ -190,13 +213,13 @@ int __stdcall wsasend_hook(SOCKET s, LPWSABUF lp, DWORD dwc, LPDWORD lpnbs, DWOR
 }
 
 typedef void(__thiscall* og_ProcessData)(uint32_t _this, uint8_t* outString, uint8_t* inString, int _length);
-auto adr = dwFindPattern(reinterpret_cast<const unsigned char*>("\x6A\xFF\x68\x00\x00\x00\x00\x64\xA1\x00\x00\x00\x00\x50\x81\xEC\x00\x00\x00\x00\x53\x55\x56\x57\xA1\x00\x00\x00\x00\x33\xC4\x50\x8D\x84\x24\x00\x00\x00\x00\x64\xA3\x00\x00\x00\x00\x8B\xF1\x83\x7E\x34\x02"), "xxx????xx????xxx????xxxxx????xxxxxx????xx????xxxxxx");
-auto orig_ProcessData = reinterpret_cast<og_ProcessData>(adr);
+uintptr_t ProcessDataAddress = pattern_scan(NULL, "40 53 55 56 57 41 54 41 56 41 57 48 81 EC ?? ?? ?? ?? 48 8b 05 ?? ?? ?? ?? 48 33 C4 48 89 84 24 ?? ?? ?? ?? 49 8B F1");
+auto orig_ProcessData = reinterpret_cast<og_ProcessData>(ProcessDataAddress);
 
 uint64_t ogrig_ProcessData = NULL;
 
 std::pair<std::vector<char>, packet_mode> set_iv;
-NOINLINE void __fastcall ogProcessData_hook(uint32_t _this, uint32_t* edx, uint8_t* outString, uint8_t* inString, int length)
+NOINLINE void __fastcall ogProcessData_hook(uint32_t _this, uint8_t* outString, uint8_t* inString, int length)
 {
 	if (length == 8 && *reinterpret_cast<uint16_t*>(inString) == 0xf00d) // is header of packet (will always be sent)
 	{
@@ -204,8 +227,11 @@ NOINLINE void __fastcall ogProcessData_hook(uint32_t _this, uint32_t* edx, uint8
 		{
 			set_iv.first.push_back(inString[i]);
 		}
-		set_iv.second = packet_mode::sent_encrytped;
+		set_iv.second = packet_mode::sent_encrypted;
+		auto old = 0ul;
+		VirtualProtect(reinterpret_cast<void*>(hkAddress), 1, PAGE_EXECUTE, &old);
 		orig_ProcessData(_this, outString, inString, length);
+		VirtualProtect(reinterpret_cast<void*>(hkAddress), 1, PAGE_EXECUTE | PAGE_GUARD, &old);
 		return;
 	}
 
@@ -218,13 +244,19 @@ NOINLINE void __fastcall ogProcessData_hook(uint32_t _this, uint32_t* edx, uint8
 		handle_packet(set_iv.first, set_iv.second);
 		set_iv.first.clear();
 		set_iv.second = packet_mode::none;
+		auto old = 0ul;
+		VirtualProtect(reinterpret_cast<void*>(hkAddress), 1, PAGE_EXECUTE, &old);
 		orig_ProcessData(_this, outString, inString, length);
+		VirtualProtect(reinterpret_cast<void*>(hkAddress), 1, PAGE_EXECUTE | PAGE_GUARD, &old);
 		return;
 	}
 
 	set_iv.second = packet_mode::recieved_encrypted;
 
+	auto old = 0ul;
+	VirtualProtect(reinterpret_cast<void*>(hkAddress), 1, PAGE_EXECUTE, &old);
 	orig_ProcessData(_this, outString, inString, length); // decrypt message from server
+	VirtualProtect(reinterpret_cast<void*>(hkAddress), 1, PAGE_EXECUTE | PAGE_GUARD, &old);
 
 	for (auto i = 0; i < length; i++)
 	{
