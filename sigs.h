@@ -47,47 +47,8 @@ inline uintptr_t pattern_scan(const char* module, const char* pattern, uintptr_t
 	return 0;
 }
 
-template< typename T > std::array< unsigned char, sizeof(T) >  to_bytes(const T& object)
-{
-	std::array< unsigned char, sizeof(T) > bytes;
-
-	const unsigned char* begin = reinterpret_cast<const unsigned char*>(std::addressof(object));
-	const unsigned char* end = begin + sizeof(T);
-	std::copy(begin, end, std::begin(bytes));
-
-	return bytes;
-}
-
-template< typename T >
-T& from_bytes(const std::array< unsigned char, sizeof(T) >& bytes, T& object)
-{
-	// http://en.cppreference.com/w/cpp/types/is_trivially_copyable
-	static_assert(std::is_trivially_copyable<T>::value, "not a TriviallyCopyable type");
-
-	unsigned char* begin_object = reinterpret_cast<unsigned char*>(std::addressof(object));
-	std::copy(std::begin(bytes), std::end(bytes), begin_object);
-
-	return object;
-}
-// get references to AuthenticatedSymmetricCipherBase::ProcessData
-std::vector<uint32_t> get_vf_references() {
-	std::vector<uint32_t> ret;
-
-	uintptr_t wizardgraphicalclient_base = reinterpret_cast<uintptr_t>(GetModuleHandleA(NULL));
+void add_veh_hook() {
 	uintptr_t ProcessDataAddress = pattern_scan(NULL, "40 53 55 56 57 41 54 41 56 41 57 48 81 EC ?? ?? ?? ?? 48 8b 05 ?? ?? ?? ?? 48 33 C4 48 89 84 24 ?? ?? ?? ?? 49 8B F1");
-	const auto pd_bytes = to_bytes((ProcessDataAddress));
-	std::stringstream ss;
-	ss << std::hex << std::setfill('0');
-	for (int i = 0; i < 8; i++)
-	{
-		ss << std::setw(2) << int(pd_bytes[i]) << ' ';
-	}
-	const char* pd_bytes_string = ss.str().c_str();
-	uintptr_t ProcessDataRef1 = pattern_scan(NULL, pd_bytes_string);
-	uintptr_t ProcessDataRef2 = pattern_scan(NULL, pd_bytes_string, (ProcessDataRef1 - wizardgraphicalclient_base) + 0x8);
-
-	ret.push_back(ProcessDataRef1);
-	ret.push_back(ProcessDataRef2);
-	
-	return ret;
+	orig_ProcessData = reinterpret_cast<og_ProcessData>(ProcessDataAddress);
+	AddVectoredExceptionHandler(true, ExceptionHandler);
 }

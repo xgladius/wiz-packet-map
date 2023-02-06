@@ -58,6 +58,29 @@ T read(char*& buf, const bool inc = true)
 	return ret;
 }
 
+LONG __stdcall ExceptionHandler(EXCEPTION_POINTERS* pExceptionInfo)
+{
+	if (pExceptionInfo->ExceptionRecord->ExceptionCode == STATUS_GUARD_PAGE_VIOLATION)
+	{
+		if (pExceptionInfo->ContextRecord->Rip == (uintptr_t)orig_ProcessData)
+			pExceptionInfo->ContextRecord->Rip = (uintptr_t)ogProcessData_hook;
+
+		pExceptionInfo->ContextRecord->EFlags |= 0x100;
+
+		return EXCEPTION_CONTINUE_EXECUTION;
+	}
+
+	if (pExceptionInfo->ExceptionRecord->ExceptionCode == STATUS_SINGLE_STEP)
+	{
+		DWORD dwOld;
+		VirtualProtect(reinterpret_cast<void*>((uintptr_t)orig_ProcessData), 1, PAGE_EXECUTE | PAGE_GUARD, &dwOld);
+
+		return EXCEPTION_CONTINUE_EXECUTION;
+	}
+
+	return EXCEPTION_CONTINUE_SEARCH;
+}
+
 packet_helper helper;
 
 void handle_packet(std::vector<char>& full, packet_mode mode) {
@@ -205,7 +228,10 @@ NOINLINE void __fastcall ogProcessData_hook(uint32_t _this, uint8_t* outString, 
 			set_iv.first.push_back(inString[i]);
 		}
 		set_iv.second = packet_mode::sent_encrypted;
+		auto old = 0ul;
+		VirtualProtect(reinterpret_cast<void*>(hkAddress), 1, PAGE_EXECUTE, &old);
 		orig_ProcessData(_this, outString, inString, length);
+		VirtualProtect(reinterpret_cast<void*>(hkAddress), 1, PAGE_EXECUTE | PAGE_GUARD, &old);
 		return;
 	}
 
@@ -218,13 +244,19 @@ NOINLINE void __fastcall ogProcessData_hook(uint32_t _this, uint8_t* outString, 
 		handle_packet(set_iv.first, set_iv.second);
 		set_iv.first.clear();
 		set_iv.second = packet_mode::none;
+		auto old = 0ul;
+		VirtualProtect(reinterpret_cast<void*>(hkAddress), 1, PAGE_EXECUTE, &old);
 		orig_ProcessData(_this, outString, inString, length);
+		VirtualProtect(reinterpret_cast<void*>(hkAddress), 1, PAGE_EXECUTE | PAGE_GUARD, &old);
 		return;
 	}
 
 	set_iv.second = packet_mode::recieved_encrypted;
 
+	auto old = 0ul;
+	VirtualProtect(reinterpret_cast<void*>(hkAddress), 1, PAGE_EXECUTE, &old);
 	orig_ProcessData(_this, outString, inString, length); // decrypt message from server
+	VirtualProtect(reinterpret_cast<void*>(hkAddress), 1, PAGE_EXECUTE | PAGE_GUARD, &old);
 
 	for (auto i = 0; i < length; i++)
 	{
